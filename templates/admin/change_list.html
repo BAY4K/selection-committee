@@ -14,9 +14,7 @@
     </li>
     
     <li>
-    <a class="update-school-table" href="{% url 'update-schools' %}">
-            Обновить школы
-        </a>
+<form method="post" action="{% url 'update-schools' %}">{% csrf_token %}<button class="update-school-table" type="submit">Обновить школы</button></form>
     </li>
 
     {{ block.super }}

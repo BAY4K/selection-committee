@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,10 +21,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3-&e9*by)dp1ejycs21jz10o-9e4ywdzzt-k7zg#zluw!r#0#w'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'local-development-only-change-before-deployment')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
+if not DEBUG and not os.environ.get('DJANGO_SECRET_KEY'):
+    raise ImproperlyConfigured('Set DJANGO_SECRET_KEY for production')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 # ALLOWED_HOSTS = ['timyr4rm.beget.tech']
 #
@@ -82,14 +87,11 @@ WSGI_APPLICATION = 'diplom.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'azamathg_azamath',
-        'USER': 'azamathg_azamath',
-        'PASSWORD': 'd&KvOBD4',
-        'HOST': '127.0.0.1',
-        'PORT': '3306'
-    }
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    },
+
 }
 
 # Password validation
@@ -125,23 +127,23 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = '/home/a/azamathg/azamathg.beget.tech/public_html/static'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-DATE_INPUT_FORMATS = ['%d-%m-%Y']
+DATE_INPUT_FORMATS = ['%Y-%m-%d', '%d-%m-%Y', '%d.%m.%Y']
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'account.authentication.EmailAuthBackend',
 ]
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = os.environ.get('DJANGO_EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
@@ -155,10 +157,20 @@ LOGOUT_REDIRECT_URL = 'home'
 
 EMAIL_HOST = 'smtp.yandex.ru'
 EMAIL_PORT = 465
-EMAIL_HOST_USER = 'HDarwinLP@yandex.ru'
-EMAIL_HOST_PASSWORD = 'ovrfxoxsypyzijff'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_SSL = True
 
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'noreply@localhost'
 SERVER_EMAIL = EMAIL_HOST_USER
 EMAIL_ADMIN = EMAIL_HOST_USER
+
+# Readable, single-use local CAPTCHA for the application form.
+CAPTCHA_CHALLENGE_FUNCT = 'main.captcha.readable_challenge'
+CAPTCHA_FONT_SIZE = 34
+CAPTCHA_IMAGE_SIZE = (220, 72)
+CAPTCHA_LETTER_ROTATION = (-12, 12)
+CAPTCHA_BACKGROUND_COLOR = '#f3f6ef'
+CAPTCHA_FOREGROUND_COLOR = '#214f3d'
+CAPTCHA_NOISE_FUNCTIONS = ('captcha.helpers.noise_arcs',)
+CAPTCHA_TIMEOUT = 10

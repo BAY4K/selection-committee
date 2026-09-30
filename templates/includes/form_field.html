@@ -1,0 +1,6 @@
+<div class="field{% if field.errors %} field-invalid{% endif %}{% if field.name == 'gender' or field.name == 'school' %} field-wide{% endif %}">
+    {% if field.name == 'gender' %}<fieldset class="gender-field"><legend>{{ field.label }}</legend><div class="radio-options">{% for radio in field %}<label class="radio-option">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div></fieldset>
+    {% else %}<label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="required-mark" aria-hidden="true">*</span>{% endif %}</label>{{ field }}{% endif %}
+    {% if field.help_text %}<div class="field-hint">{{ field.help_text }}</div>{% endif %}
+    {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+</div>

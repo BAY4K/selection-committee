@@ -5,7 +5,9 @@ from docx import Document as docs
 from django.core.mail import send_mail
 
 from account.models import User
-from diplom.settings import EMAIL_HOST_USER
+from django.conf import settings
+from django.db import transaction
+from django.utils.crypto import get_random_string
 from main.models import School, Parent, Document, Admission, Applicant, ApplicantAdmissionView
 
 urls = [
@@ -57,34 +59,39 @@ urls = [
 
 
 def parse_schools():
-    # Очистите существующие данные
-    School.objects.all().delete()
+    names = set()
     for url in urls:
-        parse_info(url)
+        names.update(parse_info(url))
+    if not names:
+        raise ValueError("Список школ пуст; существующие данные сохранены")
+    with transaction.atomic():
+        School.objects.all().delete()
+        School.objects.bulk_create([School(name=name) for name in sorted(names)])
 
 
 def parse_info(url):
-    response = requests.get(url)
+    response = requests.get(url, timeout=20)
+    response.raise_for_status()
     soup = BeautifulSoup(response.text, 'html.parser')
-
-    for schools in soup.find_all('ul', class_='edu-list col-md-4'):
-        for school in schools.find_all('li'):
-            name = school.get_text()
-            School.objects.create(name=name).save()
+    return [school.get_text(' ', strip=True)
+            for schools in soup.find_all('ul', class_='edu-list col-md-4')
+            for school in schools.find_all('li') if school.get_text(strip=True)]
 
 
 def make_docunment(student):
     ...
 
 
+@transaction.atomic
 def create_account(applicant):
-    if not User.objects.filter(email=applicant.email).exists():
+    applicant = Applicant.objects.select_for_update().get(pk=applicant.pk)
+    if not User.objects.filter(email__iexact=applicant.email).exists():
         new_user = User()
         new_user.username = (str(applicant.pk).zfill(2) +
                              str(applicant.birth_date.year) +
                              str(applicant.birth_date.month).zfill(2) +
                              str(applicant.birth_date.day).zfill(2))
-        password = User.objects.make_random_password()
+        password = get_random_string(20)
         new_user.set_password(password)
 
         new_user.email = applicant.email
@@ -92,6 +99,14 @@ def create_account(applicant):
         new_user.save()
         applicant.change_status_to_answered()
         applicant.save()
+        parents = Parent.objects.get_or_create(student=applicant)[0]
+        documents = Document.objects.get_or_create(student=applicant)[0]
+        admission = Admission.objects.get_or_create(applicant=applicant)[0]
+        parents.save()
+        documents.save()
+        admission.save()
+        ApplicantAdmissionView.objects.create(applicant=applicant, admission=admission,
+                                              document=documents, parent=parents).save()
         send_mail(
             "Ваша заявка принята.",
             f"""Ваша заявка принята, приступайте к заполнению вашей личной страницы с документами.
@@ -100,18 +115,10 @@ def create_account(applicant):
 Пароль:{password}
 
 Можно также использовать почту для авторизации.""",
-            EMAIL_HOST_USER,
+            settings.DEFAULT_FROM_EMAIL,
             [new_user.email],
             fail_silently=False,
         )
-        parents = Parent.objects.create(student=applicant)
-        documents = Document.objects.create(student=applicant)
-        admission = Admission.objects.create(applicant=applicant)
-        parents.save()
-        documents.save()
-        admission.save()
-        ApplicantAdmissionView.objects.create(applicant=applicant, admission=admission,
-                                              document=documents, parent=parents).save()
         return True
     return False
 
@@ -122,12 +129,12 @@ def confirm_student(admission):
 
 
 def deny_student(admission):
-    admission.change_status_to_accepted()
+    admission.change_status_to_denied()
     return True
 
 
 def warn_student(admission):
-    admission.change_status_to_accepted()
+    admission.change_status_to_warn()
     return True
 
 
@@ -135,7 +142,7 @@ def send_invite_email(email, subject, message):
     send_mail(
         subject,
         message,
-        EMAIL_HOST_USER,
+        settings.DEFAULT_FROM_EMAIL,
         [email],
         fail_silently=False,
     )
@@ -143,6 +150,7 @@ def send_invite_email(email, subject, message):
 
 def replace_text_in_runs(paragraph, replacements):
     for key, value in replacements.items():
+        value = str(value or '')
         if key in paragraph.text:
             full_text = ''.join([run.text for run in paragraph.runs])
             new_text = full_text.replace(key, value)
@@ -150,24 +158,29 @@ def replace_text_in_runs(paragraph, replacements):
             for i in range(len(paragraph.runs)):
                 paragraph.runs[i].text = ''
 
-            paragraph.runs[0].text = new_text
+            if paragraph.runs:
+                paragraph.runs[0].text = new_text
+            else:
+                paragraph.add_run(new_text)
 
 
 def fill_template(person_id, template_path):
     person = get_object_or_404(Applicant, id=person_id)
     doc = docs(template_path)
 
+    document = getattr(person, 'document', None) or Document()
+    admission = getattr(person, 'student', None)
     replacements = {
-        '{last_name}': f'{person.first_name}',
-        '{first_name}': person.last_name,
+        '{last_name}': person.last_name,
+        '{first_name}': person.first_name,
         '{patronymic}': person.patronymic,
         '{birth_date}': person.birth_date.strftime('%d.%m.%Y'),
-        '{passport}': f'Серия  {person.document.get_passport_series()}   № {person.document.get_passport_num()}',
-        '{issued_by}': person.document.issued_by,
-        '{issue_date}': person.document.issue_date.strftime('%d.%m.%Y'),
+        '{passport}': f'Серия  {document.get_passport_series()}   № {document.get_passport_num()}',
+        '{issued_by}': document.issued_by,
+        '{issue_date}': document.issue_date.strftime('%d.%m.%Y') if document.issue_date else '',
         '{phone}': person.phone,
-        '{snils}': person.document.SNILS,
-        '{addmissions}': person.student.get_departments(),
+        '{snils}': document.SNILS,
+        '{addmissions}': admission.get_departments() if admission else '',
     }
 
     for paragraph in doc.paragraphs:
@@ -178,10 +191,6 @@ def fill_template(person_id, template_path):
         for row in table.rows:
             for cell in row.cells:
                 for paragraph in cell.paragraphs:
-                    for key, value in replacements.items():
-                        if key in paragraph.text:
-                            for run in paragraph.runs:
-                                if key in run.text:
-                                    run.text = run.text.replace(key, value)
+                    replace_text_in_runs(paragraph, replacements)
 
     return doc

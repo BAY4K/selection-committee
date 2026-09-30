@@ -22,11 +22,11 @@ from diplom import settings
 from main.views import page_not_found, export_students
 
 urlpatterns = [
+    path('admin/export_students/', export_students, name='export_students'),
     path('admin/', admin.site.urls),
     path('', include('main.urls')),
     path('account/', include('account.urls', namespace='account')),
     path('captcha/', include('captcha.urls')),
-    path('admin/export_students/', export_students, name='export_students'),
 ]
 
 if settings.DEBUG:

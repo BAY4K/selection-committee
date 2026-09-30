@@ -1,18 +1,4 @@
 {% extends 'base.html' %}
-
-{% block title %}Профиль{% endblock %}
-
-{% block profile_class %}profile{% endblock %}
-
-{% block side-menu %}
-    <nav class="side-menu">
-        <ul>
-            <li><a href="{% url 'account:profile' user.id %}">Кабинет</a></li>
-            <li><a href="{% url 'account:profile-edit' user.student.id %}">Личная информация</a></li>
-            <li><a href="{% url 'account:documents-edit' user.student.id %}">Документы</a></li>
-            <li><a href="{% url 'account:parents-edit' user.student.id %}">Родители</a></li>
-            <li><a href="{% url 'account:admission-create' user.student.id %}">Заявление на поступление</a></li>
-            <li><a href="{% url 'account:rank-profile' %}">Узнать место в рейтинге</a></li>
-        </ul>
-    </nav>
-{% endblock %}
+{% block title %}Личный кабинет{% endblock %}
+{% block profile_class %}profile-page{% endblock %}
+{% block page_layout %}<div class="container profile-layout"><aside class="profile-sidebar"><p class="eyebrow">Личный кабинет</p><h2>Привет, {{ user.student.first_name }}<span class="brand-dot">.</span></h2><p class="muted">Твоё поступление под контролем</p><nav aria-label="Разделы личного кабинета"><a class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'account:profile' user.id %}"><span aria-hidden="true">⌂</span>Обзор</a><a class="{% if request.resolver_match.url_name == 'profile-edit' %}active{% endif %}" href="{% url 'account:profile-edit' user.student.id %}"><span aria-hidden="true">◉</span>Личные данные</a><a class="{% if request.resolver_match.url_name == 'documents-edit' %}active{% endif %}" href="{% url 'account:documents-edit' user.student.id %}"><span aria-hidden="true">▤</span>Документы</a><a class="{% if request.resolver_match.url_name == 'parents-edit' %}active{% endif %}" href="{% url 'account:parents-edit' user.student.id %}"><span aria-hidden="true">◇</span>Родители</a><a class="{% if request.resolver_match.url_name == 'admission-create' %}active{% endif %}" href="{% url 'account:admission-create' user.student.id %}"><span aria-hidden="true">↗</span>Направления</a><a class="{% if request.resolver_match.url_name == 'rank-profile' %}active{% endif %}" href="{% url 'account:rank-profile' %}"><span aria-hidden="true">≡</span>Рейтинг</a></nav><a class="sidebar-bottom" href="{% url 'account:password_change' %}">Изменить пароль ↗</a></aside><section class="profile-main">{% block content %}{% endblock %}</section></div>{% endblock %}

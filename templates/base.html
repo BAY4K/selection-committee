@@ -1,204 +1,53 @@
 {% load static %}
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta http-equiv="Content-type" content="text/html;charset=windows-1251">
-    <meta http-equiv="Content-Language" content="ru">
-    <meta name="robots" content="noindex">
-    <meta http-equiv="refresh" content="N; url=URL">
-    <meta name="Author" content="Баев Тимур Радикович">
-    <meta name="Copyright" content="Баев Тимур Радикович">
-    <meta name="description" content="Веб-приложение для облегчения работы приёмной комиссии">
-
-    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
-    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Приёмная комиссия Набережночелнинского педагогического колледжа. Заявка, личный кабинет и рейтинг абитуриента.">
+    <meta name="theme-color" content="#214f3d">
+    <title>{% block title %}Приёмная комиссия{% endblock %} · НПК</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css">
-    <title>{% block title %}{% endblock %}</title>
+    {% block extra_head %}{% endblock %}
 </head>
-<style>
-    .ui-autocomplete {
-        max-height: 100px;
-        max-width: 500px;
-        overflow-y: auto;
-        /* prevent horizontal scrollbar */
-        overflow-x: hidden;
-    }
-
-    /* IE 6 doesn't support max-height
-     * we use height instead, but this forces the menu to always be this tall
-     */
-    * html .ui-autocomplete {
-        height: 100px;
-    }
-</style>
 <body>
-<div class="wrapper">
-    <header class="header">
-        <div class="container">
-            <nav class="navigation-menu">
-
-                <ul class="navigation-menu-list">
-                    <li><a href="{% url 'home' %}"><img src="{% static 'main/img/logo.svg' %}" alt=""></a></li>
-                    <li><a href="{% url 'home' %}">Главная</a></li>
-                </ul>
-
-                <ul class="navigation-menu-list">
-                    {% if user.is_authenticated %}
-                        {% if user.is_superuser or user.is_staff %}
-                            <li><a href="/admin/">Админ-панель</a></li>
-                        {% else %}
-                            <li><a href="{% url 'account:profile' user.id %}">Личный кабинет</a></li>
-                        {% endif %}
-
-                        <li>
-                            <form action="{% url 'account:logout' %}" method="post">
-                                {% csrf_token %}
-                                <button class="exit-button" type="submit">Выйти</button>
-                            </form>
-
-                        </li>
-                    {% else %}
-                        <li><a href="{% url 'account:login' %}">Логин</a></li>
-                        <li><a href="{% url 'form' %}">Регистрация</a></li>
-                    {% endif %}
-                </ul>
-                <div class="menu">
-                    <a href="{% url 'home' %}"><img src="{% static 'main/img/logo.svg' %}" alt=""></a>
-                    <input type="checkbox" id="burger-checkbox" class="burger-checkbox">
-                    <label for="burger-checkbox" class="burger"></label>
-                    <ul class="menu-list">
-                        <li><a class="menu-item" href="{% url 'home' %}">Главная</a></li>
-                        {% if user.is_authenticated %}
-                            {% if user.is_superuser or user.is_staff %}
-                                <li><a class="menu-item" href="/admin/">Админ-панель</a></li>
-                            {% else %}
-                                <li><a class="menu-item" href="{% url 'account:profile' user.id %}">Личный кабинет</a>
-                                </li>
-                            {% endif %}
-
-                            <li>
-                                <form class="menu-item" action="{% url 'account:logout' %}" method="post">
-                                    {% csrf_token %}
-                                    <button class="exit-button" type="submit">Выйти</button>
-                                </form>
-
-                            </li>
-                        {% else %}
-                            <li><a href="{% url 'account:login' %}">Логин</a></li>
-                            <li><a href="{% url 'form' %}">Регистрация</a></li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </nav>
+<a class="skip-link" href="#main-content">Перейти к содержимому</a>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" href="{% url 'home' %}" aria-label="НПК — главная">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 7c5-1 8 0 11 3 3-3 6-4 11-3v18c-5-1-8 0-11 2-3-2-6-3-11-2V7Z" stroke="currentColor" stroke-width="1.8"/><path d="M16 10v17M9 13l3 1M20 14l3-1M9 18l3 1M20 19l3-1" stroke="currentColor" stroke-width="1.5"/></svg></span>
+            <span class="brand-text"><strong>НПК<span class="brand-dot">.</span></strong><small>Приёмная комиссия</small></span>
+        </a>
+        <nav class="section-links" aria-label="Основная навигация">
+            <a href="{% url 'home' %}#directions">Направления</a>
+            <a href="{% url 'home' %}#how-to-apply">Как поступить</a>
+            <a href="{% url 'home' %}#contacts">Контакты</a>
+        </nav>
+        <div class="header-actions">
+            {% if user.is_authenticated %}
+                {% if user.is_staff %}<a class="button button-outline button-small" href="{% url 'admin:index' %}">Админ-панель</a>
+                {% elif user.student_id %}<a class="button button-outline button-small" href="{% url 'account:profile' user.id %}">Личный кабинет</a>{% endif %}
+                <form action="{% url 'account:logout' %}" method="post">{% csrf_token %}<button class="text-button" type="submit">Выйти</button></form>
+            {% else %}<a class="login-link" href="{% url 'account:login' %}">Войти <span aria-hidden="true">↗</span></a><a class="button button-small" href="{% url 'form' %}">Подать заявку</a>{% endif %}
         </div>
-    </header>
-    <main class="{% block profile_class %}{% endblock %}">
-        {% block side-menu %}
-        {% endblock %}
-        <div class="mainside">
-            {% block content %}
-
-            {% endblock %}
-        </div>
-    </main>
-
-    
-</div>
-<footer id="section-sub-footer" class="site-sub-footer clearfix" role="contentinfo">
-        <div class="container">
-            <div class="sixteen columns">
-
-                <div class="columns left">
-                    ГАПОУ "Набережночелнинский педагогический колледж"
-                </div><!-- .site-info -->
-
-                <div class="columns right">
-                    &copy; 4K works, 2024
-                    <ul class="social">
-
-
-                        <li>
-                            <a target="_blank" href="http://alpha-edu.pedcollchelny.ru/">
-                                <img height="25" width="25"
-                                     src="https://pedcollchelny.ru/wp-content/uploads/2018/03/alpha-edu.png"
-                                     title="ЦРД &quot;Альфа-поколение&quot;" alt="ЦРД &quot;Альфа-поколение&quot;">
-                            </a>
-                        </li>
-                        <li>
-                            <a target="_blank" href="http://Vk.com/pedcoll_chelny">
-                                <img height="25" width="25"
-                                     src="https://pedcollchelny.ru/wp-content/uploads/2018/03/VK_Logo.png"
-                                     title="Группа колледжа в соцсети" alt="Группа колледжа в соцсети">
-                            </a>
-                        </li>
-                        <li>
-                            <a target="_blank" href="http://distant.pedcollchelny.ru/">
-                                <img height="25" width="25"
-                                     src="https://pedcollchelny.ru/wp-content/uploads/2018/03/logo_small.png"
-                                     title="Платформа дистанционного образования"
-                                     alt="Платформа дистанционного образования">
-                            </a>
-                        </li>
-
-                    </ul>
-                </div>
-
-            </div>
-        </div>
-    </footer>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://code.jquery.com/ui/1.13.3/jquery-ui.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
-
-<script>
-    $(function () {
-        $("#id_school").autocomplete({
-            source: '{% url 'autocomplete' %}',
-            minLength: 1,
-            result: 5
-        });
-    });
-</script>
-<script>
-    $(document).ready(function () {
-        // Добавление маски на поля при загрузке страницы
-        $('#id_SNILS').mask('000-000-000 00');
-        $('#id_INN').mask('00-00-000000-00');
-        $('#id_passport_number').mask('00 00 000000');
-        $('#id_phone').mask('+7(000)000-00-00');
-
-        // Обработка изменения значения в полях
-        $('#id_SNILS').on('input', function () {
-            $(this).mask('000-000-000 00');
-        });
-
-        $('#id_INN').on('input', function () {
-            $(this).mask('00-00-000000-00');
-
-        });
-
-        $('#id_passport_number').on('input', function () {
-            $(this).mask('00 00 000000');
-        });
-
-        $('#id_phone').on('input', function () {
-            $(this).mask('+7(000)000-00-00');
-        });
-
-        $('#id_mother_phone').on('input', function () {
-            $(this).mask('+7(000)000-00-00');
-        });
-
-        $('#id_father_phone').on('input', function () {
-            $(this).mask('+7(000)000-00-00');
-        });
-    });
-</script>
+    </div>
+</header>
+<main id="main-content" class="{% block profile_class %}{% endblock %}">
+    {% if messages %}<div class="container messages" role="status">{% for message in messages %}<div class="notice notice-{{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% block page_layout %}{% block content %}{% endblock %}{% endblock %}
+</main>
+<footer class="site-footer" id="contacts">
+    <div class="container footer-main">
+        <div><a class="footer-brand" href="{% url 'home' %}">НПК<span>·</span></a><p>Знания, которые становятся<br>делом всей жизни.</p></div>
+        <div><span class="footer-label">Приёмная комиссия</span><p>Набережные Челны<br>пр. Р. Беляева, 3 (56/04)</p><a class="footer-phone" href="tel:+78552583022">8 (8552) 58-30-22</a></div>
+        <nav aria-label="Навигация в подвале"><span class="footer-label">Полезные ссылки</span><a href="{% url 'form' %}">Подать заявку ↗</a><a href="{% url 'account:login' %}">Личный кабинет ↗</a><a href="https://edu.tatar.ru/n_chelny/page1577.htm" target="_blank" rel="noopener noreferrer">Сайт колледжа ↗</a></nav>
+    </div>
+    <div class="container footer-bottom"><span>© {% now "Y" %} Набережночелнинский педагогический колледж</span><span>С заботой о твоём будущем</span></div>
+</footer>
+<script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script defer src="https://code.jquery.com/ui/1.13.3/jquery-ui.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script defer src="{% static 'js/site.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

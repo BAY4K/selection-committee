@@ -14,6 +14,6 @@
 {% block nav-global %}{% endblock %}
 
 {% block extrastyle %}
+    {{ block.super }}
     <link rel="stylesheet" href="{% static 'css/admin/admin.css' %}">
-    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
 {% endblock %}

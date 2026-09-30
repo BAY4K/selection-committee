@@ -1,38 +1,4 @@
 {% extends 'base.html' %}
-
-{% block title %}Вход на сайт{% endblock %}
-{% block profile_class %}form-page login{% endblock %}
-{% block content %}
-
-    <div class="registration_application">
-        <h2 class="center">Вход в личный кабинет</h2>
-
-        <form class="registration_form" method="POST">
-            {% csrf_token %}
-
-            <div class="form-error">{{ form.non_field_errors }}</div>
-
-            {% for f in form %}
-                {% if f.label == 'Пароль' %}
-                    <div class="input-field">
-                        <label hidden="hidden" for="{{ f.id_for_label }}">{{ f.label }}</label>
-                        {{ f }}
-                        <div class="input-errors">{{ f.errors }}</div>
-                    </div>
-                {% else %}
-                    <div class="input-field">
-                        <label hidden="hidden" for="{{ f.id_for_label }}">{{ f.label }}</label>
-                        {{ f }}
-                        <div class="input-errors">{{ f.errors }}</div>
-                    </div>
-                {% endif %}
-
-            {% endfor %}
-            <button class="form-control-submit-btn">Войти</button>
-
-{#            <a href="{% url 'account:password_reset' %}">Забыли пароль?</a>#}
-            <a href="{% url 'form' %}">Перед входом на сайт, необходимо подать заявку на регистрацию.</a>
-        </form>
-    </div>
-
-{% endblock %}
+{% block title %}Личный кабинет{% endblock %}
+{% block profile_class %}auth-page{% endblock %}
+{% block content %}<div class="container auth-layout"><div class="auth-intro"><p class="eyebrow">Рады видеть тебя снова</p><h1>Всё о поступлении.<br><em>В одном месте.</em></h1><p>Документы, выбранные направления и статус заявления — в твоём личном кабинете.</p><div class="auth-decoration" aria-hidden="true"><span>Твой путь</span><div>Заявка <i>→</i> Кабинет <i>→</i> Будущее</div><b>↗</b></div></div><div class="form-card auth-card"><span class="pill">Личный кабинет</span><h2>{% if view.context_object_name == 'registration' %}Создать аккаунт{% else %}С возвращением{% endif %}</h2><p class="muted">Введи логин или почту и пароль.</p><form method="post">{% csrf_token %}{% if form.non_field_errors %}<div class="error-summary" role="alert">{{ form.non_field_errors }}</div>{% endif %}{% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.name == 'password' %}<div class="password-field">{{ field }}<button type="button" class="password-toggle" data-password-toggle="{{ field.id_for_label }}" aria-pressed="false">Показать</button></div>{% else %}{{ field }}{% endif %}{% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}</div>{% endfor %}{% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}<a class="forgot-link" href="{% url 'account:password_reset' %}">Не помнишь пароль?</a><button class="button submit-button" type="submit">{% if view.context_object_name == 'registration' %}Создать аккаунт{% else %}Войти в кабинет{% endif %} <span aria-hidden="true">↗</span></button></form><div class="auth-card-bottom">Ещё нет личного кабинета?<br><a href="{% url 'form' %}">Подай заявку на поступление →</a></div></div></div>{% endblock %}

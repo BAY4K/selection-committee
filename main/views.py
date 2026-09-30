@@ -1,4 +1,9 @@
-import os
+from datetime import datetime
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_POST
+from django.db.models import Model
 import string
 
 import openpyxl
@@ -29,100 +34,24 @@ class TestFormView(CreateView):
     form_class = ApplicantShortForm
     success_url = reverse_lazy('home')
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, 'Заявка отправлена! После рассмотрения мы пришлём данные для входа на указанную почту.')
+        return response
 
+
+@staff_member_required
 def download_table(request):
-    # Получите данные из базы данных
-    queryset = Applicant.objects.all()
-
-    # Создайте новый файл Excel
-    wb = Workbook()
-    ws = wb.active
-    ws.title = 'Студенты'
-
-    ws.append([
-        '№ п/п',
-        'ФИО',
-        'пол',
-        'Кол "5"',
-        'Кол "4"',
-        'Кол "3"',
-        'Снилс',
-        'инн',
-        'средн балл',
-        'оригинал/копия',
-        'внебюджет',
-        'Документы | забрали',
-        'Получил ли расписку',
-        'школа',
-        'год окончания',
-        'ФИС',
-        'номер заявления',
-        'Электронное заявление',
-        'Дата ЭЗ',
-        'Дата и время проведения испытания',
-        'Статус',
-        'Вступительный экзамен',
-        'Дата рождения',
-        'Личный телефон',
-        'Мама',
-        'Телефон мамы',
-        'Папа',
-        'Телефон папы',
-        'номер паспорта',
-        'Кем выдан',
-        'Дата выдачи'
-    ])
-
-    # Добавьте данные из базы данных в файл Excel
-    for obj in queryset:
-        ws.append([obj.pk,
-                   f'{obj.first_name} {obj.last_name} {obj.patronymic}',  # ФИО
-                   f'{obj.gender}',  # Пол
-                   f'{obj.student.number_of_5}',
-                   f'{obj.student.number_of_4}',
-                   f'{obj.student.number_of_3}',
-                   f'{obj.document.SNILS}',
-                   f'{obj.document.INN}',
-                   f'{obj.student.average_score}',
-                   f'{obj.student.original_or_copy}',
-                   f'{obj.student.out_of_budget}',
-                   f'{obj.student.documents_collected}',
-                   f'{obj.student.received_receipt}',
-                   f'{obj.school}',
-                   f'{obj.graduation_date}',
-                   f'{obj.document.FIS}',
-                   f'{str(obj.id).zfill(5)}',
-                   f'{obj.student.application_in_gov_services}',
-                   f'',
-                   f'',
-                   f'{obj.student.application_status}',
-                   f'{obj.student.internal_exam}',
-                   f'{obj.birth_date}',
-                   f'{obj.phone}',
-                   f'{obj.parents.mother_full_name}',
-                   f'{obj.parents.mother_phone}',
-                   f'{obj.parents.father_full_name}',
-                   f'{obj.parents.father_phone}',
-                   f'{obj.document.passport_number}',
-                   f'{obj.document.issued_by}',
-                   f'{obj.document.issue_date}'
-                   ])
-
-    # Создаём HTTP-ответ для скачивания файла
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename=Applicants.xlsx'
-
-    # Сохраняем файл Excel в HTTP-ответ
-    wb.save(response)
-    return response
+    selection = {group + '_CHOICES': [name for name, _ in getattr(FieldSelectionForm, group + '_FIELDS')]
+                 for group in ('APPLICANT', 'DOCUMENT', 'PARENT', 'ADMISSION')}
+    return export_to_excel(request, selection=selection)
 
 
 def download_document(request):
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # Define text file name
     filename = 'tipovaya-forma_soglasie.doc'
     # Define the full file path
-    filepath = BASE_DIR + '\\static\\documents\\' + filename
+    filepath = settings.BASE_DIR / 'static' / 'documents' / filename
     # Open the file for reading content
     response = FileResponse(open(filepath, 'rb'))
     response['Content-Disposition'] = 'attachment; filename="your_file.doc"'
@@ -130,15 +59,17 @@ def download_document(request):
     return response
 
 
+@staff_member_required
+@require_POST
 def update_schools(request):
     parse_schools()
     return redirect('home')
 
 
+@staff_member_required
 def generate_document(request, person_id):
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     person = get_object_or_404(Applicant, id=person_id)
-    template_path = BASE_DIR + '\\static\\documents\\' + 'ZayavlenieAbiturienta.docx'
+    template_path = settings.BASE_DIR / 'static' / 'documents' / 'ZayavlenieAbiturienta.docx'
     filled_doc = fill_template(person.id, template_path)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
@@ -153,122 +84,31 @@ def normalize(text):
 
 
 def autocomplete(request):
-    if 'term' in request.GET:
-        term_request = normalize(request.GET.get('term'))
-
-        qs = School.objects.filter(name__iregex=term_request)
-        title = []
-        for school in qs:
-            title.append(school.name)
-        return JsonResponse(title, safe=False)
-
-    render(request, 'main/form.html')
+    term = request.GET.get('term', '').strip()
+    names = School.objects.filter(name__icontains=term).order_by('name').values_list('name', flat=True)[:30] if term else []
+    return JsonResponse(list(names), safe=False)
 
 
+@staff_member_required
 def export_data(request):
-    if request.method == 'GET':
-        form = ApplicantShortForm()
-
-        return render(request, 'admin/export_data.html')
-
-    if request.method == 'POST':
-        queryset = Applicant.objects.all()
-
-        # Создайте новый файл Excel
-        wb = Workbook()
-        ws = wb.active
-        ws.title = 'Студенты'
-
-        ws.append([
-            '№ п/п',
-            'ФИО',
-            'пол',
-            'Кол "5"',
-            'Кол "4"',
-            'Кол "3"',
-            'Снилс',
-            'инн',
-            'средн балл',
-            'оригинал/копия',
-            'внебюджет',
-            'Документы | забрали',
-            'Получил ли расписку',
-            'школа',
-            'год окончания',
-            'ФИС',
-            'номер заявления',
-            'Электронное заявление',
-            'Дата ЭЗ',
-            'Дата и время проведения испытания',
-            'Статус',
-            'Вступительный экзамен',
-            'Дата рождения',
-            'Личный телефон',
-            'Мама',
-            'Телефон мамы',
-            'Папа',
-            'Телефон папы',
-            'номер паспорта',
-            'Кем выдан',
-            'Дата выдачи'
-        ])
-
-        # Добавьте данные из базы данных в файл Excel
-        for obj in queryset:
-            parents = Parent.objects.get(student_id=obj.pk)
-            ws.append([obj.pk,
-                       f'{obj.first_name} {obj.last_name} {obj.patronymic}',  # ФИО
-                       f'{obj.gender}',  # Пол
-                       'Кол "5"',
-                       'Кол "4"',
-                       'Кол "3"',
-                       'Снилс',
-                       'инн',
-                       'средн балл',
-                       'оригинал/копия',
-                       'внебюджет',
-                       'Документы | забрали',
-                       'Получил ли расписку',
-                       f'{obj.school}',
-                       f'{obj.graduation_date}',
-                       'ФИС',
-                       'номер заявления',
-                       'Электронное заявление',
-                       'Дата ЭЗ',
-                       'Дата и время проведения испытания',
-                       'Статус',
-                       'Вступительный экзамен',
-                       'Дата рождения',
-                       'Личный телефон',
-                       f'{parents.mother_full_name}',
-                       f'{parents.mother_phone}',
-                       f'{parents.father_full_name}',
-                       f'{parents.father_phone}',
-                       'номер паспорта',
-                       'Кем выдан',
-                       'Дата выдачи'
-                       ])
-
-        # Создаём HTTP-ответ для скачивания файла
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=Applicants.xlsx'
-
-        # Сохраняем файл Excel в HTTP-ответ
-        wb.save(response)
-        return response
+    return export_to_excel(request)
 
 
+@staff_member_required
 def export_students(request):
     dataset = StudentResource().export()
+    for index, row in enumerate(dataset):
+        dataset[index] = ["'" + value if isinstance(value, str) and value.startswith(('=', '+', '-', '@')) else value for value in row]
     response = HttpResponse(dataset.xlsx,
                             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="students.xlsx"'
     return response
 
 
-def export_to_excel(request):
-    if request.method == 'POST':
-        form = FieldSelectionForm(request.POST)
+@staff_member_required
+def export_to_excel(request, selection=None):
+    if request.method == 'POST' or selection is not None:
+        form = FieldSelectionForm(selection if selection is not None else request.POST)
         if form.is_valid():
             selected_fields = {
                 'applicant': form.cleaned_data.get('APPLICANT_CHOICES', []),
@@ -289,7 +129,7 @@ def export_to_excel(request):
             verbose_names = ['ID']
             order = ['last_name', 'first_name', 'patronymic', 'gender', 'birth_date', 'email', 'phone', 'address',
                      'school', 'graduation_date', 'education', 'consent', 'SNILS',
-                     'INN', 'passport_number', 'certificate', 'FIS', 'mother_full_name',
+                     'INN', 'passport_number', 'mother_full_name',
                      'mother_phone', 'father_full_name', 'father_phone', 'admission_date', 'number_of_5', 'number_of_4',
                      'number_of_3', 'average_score', 'internal_exam', 'application_status', 'original_or_copy',
                      'out_of_budget', 'received_receipt', 'internal_exam_conducted', 'documents_collected',
@@ -319,17 +159,24 @@ def export_to_excel(request):
             ws.cell(row=row_num, column=1, value='ID')
 
             # Add data
-            for idx, obj in enumerate(ApplicantAdmissionView.objects.all(), start=1):
+            for idx, obj in enumerate(Applicant.objects.select_related('document', 'parents', 'student').all(), start=1):
                 row_num += 1
                 col_num = 1
                 # Add ID
                 ws.cell(row=row_num, column=col_num, value=idx)
                 col_num += 1
                 for model, field in headers[1:]:  # Skip the first ID header
-                    related_obj = getattr(obj, model)
-                    value = getattr(related_obj, field)
+                    related_obj = obj if model == 'applicant' else getattr(obj, {'parent': 'parents', 'admission': 'student'}.get(model, model), None)
+                    value = getattr(related_obj, field, None)
                     if callable(value):
                         value = value()
+                    if isinstance(value, Model):
+                        value = str(value)
+                    if isinstance(value, datetime) and value.tzinfo is not None:
+                        from django.utils import timezone
+                        value = timezone.make_naive(value, timezone.get_current_timezone())
+                    if isinstance(value, str) and value.startswith(('=', '+', '-', '@')):
+                        value = "'" + value
                     if isinstance(value, bool):
                         value = 'Да' if value else 'Нет'
                     ws.cell(row=row_num, column=col_num, value=value)
@@ -372,4 +219,4 @@ def export_to_excel(request):
 
 
 def page_not_found(request, exception):
-    return HttpResponse("404 NOT FOUND")
+    return HttpResponse("404 NOT FOUND", status=404)

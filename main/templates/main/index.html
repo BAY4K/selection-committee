@@ -1,30 +1,32 @@
-{% extends 'base.html' %}
-
-{% load static %}
-
-{% block title %}Отделения{% endblock %}
-
+{% extends 'base.html' %}{% load static %}
+{% block title %}Твой следующий шаг{% endblock %}
 {% block content %}
-    <section class="preview">
-        <div class="container">
-            <h1>Приёмная комиссия Набережночелнинского педагогического колледжа</h1>
-            <p>Подай заявку на регистрацию прямо сейчас и поучаствуй в конкурсе на поступление в бюджетную группу</p>
-            {% if user.is_authenticated %}
-                {% if user.is_staff or user.is_superuser %}
-                	<a class="application-btn" href="{% url 'form' %}">Зарегистрироваться</a>
-                {% else %}
-                    <a class="application-btn" href="{% url 'account:profile' user.id %}">Зарегистрироваться</a>
-                {% endif %}
-            {% else %}
-                <a class="application-btn" href="{% url 'form' %}">Зарегистрироваться</a>
-            {% endif %}
-
-        </div>
-    </section>
-
-    <section class="faculties">
-        <section class="info">
-            <div class="entry-content container">
+<section class="hero"><div class="container hero-grid">
+    <div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> Набережночелнинский педагогический колледж</p>
+        <h1>Большое будущее<br>начинается<br><em>с первого шага.</em></h1>
+        <p class="hero-description">Выбирай то, что тебе близко. Мы поможем пройти путь от первой заявки до нового этапа твоей жизни.</p>
+        <div class="hero-actions"><a class="button" href="{% url 'form' %}">Подать заявку <span aria-hidden="true">↗</span></a><a class="button button-plain" href="#directions">Выбрать направление <span aria-hidden="true">↓</span></a></div>
+        <div class="hero-note"><span class="note-icon" aria-hidden="true">✓</span><span>Заявка онлайн. Личный кабинет. Всё под рукой.</span></div>
+    </div>
+    <div class="hero-art"><img src="{% static 'img/admission-illustration.svg' %}" width="540" height="500" alt="Книга, выпускная шапочка и ступени к зданию колледжа"><div class="art-label"><span class="art-label-icon" aria-hidden="true">↗</span><div><strong>Здесь начинается твой путь</strong><small>Педагогика · Музыка · IT</small></div></div></div>
+</div></section>
+<section class="section directions" id="directions"><div class="container">
+    <div class="section-heading"><div><p class="eyebrow">Учиться тому, что любишь</p><h2>Найди своё направление</h2></div><p>Разные таланты.<br>Один уверенный шаг вперёд.</p></div>
+    <div class="direction-grid">
+        {% for department in departments %}<a class="direction-card tone-{{ forloop.counter0|divisibleby:2|yesno:'green,sand' }}" href="{% url 'form' %}"><span class="card-index">{{ forloop.counter|stringformat:'02d' }}</span><span class="card-arrow" aria-hidden="true">↗</span><div><p class="card-kicker">Направление подготовки</p><h3>{{ department.name }}</h3></div><span class="card-link">Начать поступление <span aria-hidden="true">→</span></span></a>
+        {% empty %}
+        <a class="direction-card tone-green" href="{% url 'form' %}"><span class="card-index">01</span><span class="card-arrow" aria-hidden="true">↗</span><div><p class="card-kicker">44.02.02 · Педагогика</p><h3>Преподавание<br>в начальных классах</h3></div><span class="card-link">Начать поступление →</span></a>
+        <a class="direction-card tone-sand" href="{% url 'form' %}"><span class="card-index">02</span><span class="card-arrow" aria-hidden="true">↗</span><div><p class="card-kicker">44.02.01 · Педагогика</p><h3>Дошкольное<br>образование</h3></div><span class="card-link">Начать поступление →</span></a>
+        <a class="direction-card tone-lilac" href="{% url 'form' %}"><span class="card-index">03</span><span class="card-arrow" aria-hidden="true">↗</span><div><p class="card-kicker">53.02.01 · Творчество</p><h3>Музыкальное<br>образование</h3></div><span class="card-link">Начать поступление →</span></a>
+        <a class="direction-card tone-blue" href="{% url 'form' %}"><span class="card-index">04</span><span class="card-arrow" aria-hidden="true">↗</span><div><p class="card-kicker">09.02.07 · Технологии</p><h3>Информационные системы<br>и программирование</h3></div><span class="card-link">Начать поступление →</span></a>
+        {% endfor %}
+    </div>
+</div></section>
+<section class="section journey" id="how-to-apply"><div class="container">
+    <div class="section-heading"><div><p class="eyebrow">Шаг за шагом</p><h2>Поступить проще, чем кажется</h2></div><a class="button button-outline" href="{% url 'form' %}">Начнём? ↗</a></div>
+    <ol class="steps-grid"><li><span class="step-number">01</span><h3>Отправь заявку</h3><p>Расскажи о себе и укажи школу. Для первого шага понадобится только несколько минут.</p></li><li><span class="step-number">02</span><h3>Заполни личный кабинет</h3><p>После рассмотрения заявки получи данные для входа на почту и добавь необходимые документы.</p></li><li><span class="step-number">03</span><h3>Следи за поступлением</h3><p>Выбери направление, проверяй статус заявления и своё место в рейтинге.</p></li></ol>
+</div></section>
+<section class="section resources"><div class="container resources-grid"><div><p class="eyebrow">Всё, что пригодится</p><h2>Документы<br>и полезные ссылки</h2><p class="muted">Актуальные правила и сроки приёма уточняй на официальном сайте колледжа или в приёмной комиссии.</p><a class="inline-link" href="https://edu.tatar.ru/n_chelny/page1577.htm" target="_blank" rel="noopener noreferrer">Официальный сайт колледжа ↗</a></div><div class="resource-links"><a href="{% url 'download_document' %}"><span><small>Документ</small>Согласие на обработку данных</span><span aria-hidden="true">↓</span></a><a href="{% url 'account:login' %}"><span><small>Для абитуриентов</small>Личный кабинет и рейтинг</span><span aria-hidden="true">↗</span></a><details class="archive"><summary><span><small>Архив · 2023–2024</small>Правила, списки и документы</span><span aria-hidden="true">+</span></summary><div class="archive-body"><p class="notice">Архивная информация за 2023–2024 год. Не используйте указанные здесь сроки и места для текущей приёмной кампании.</p>
                 <p><strong>Списки абитуриентов подавших заявление</strong></p>
                 <p><u></u><strong><u><a
                         href="https://docs.google.com/document/d/1KGBd0J5MIwRw279HYDmZiI6JwOwcItzraeunz1ArrpQ/edit">Преподавание
@@ -223,7 +225,6 @@
                 <p>Наш адрес:423812 г. Набережные Челны, пр. Р. Беляева, д.3 (56/04)</p>
                 <p>Телефон: 8(8552)-58-30-22</p>
                 <p>Официальный сайт: https://edu.tatar.ru/n_chelny/page1577.htm</p>
-            </div>
-        </section>
-    </section>
+            </div></details></div></div></section>
+<section class="container closing-banner"><div><p class="eyebrow">Будущее ждёт</p><h2>Твой первый шаг — здесь.</h2></div><a class="button button-light" href="{% url 'form' %}">Подать заявку ↗</a></section>
 {% endblock %}

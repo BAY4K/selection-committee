@@ -5,6 +5,10 @@ from django.db import models
 import datetime
 
 
+def current_graduation_year():
+    return str(datetime.date.today().year)
+
+
 class School(models.Model):
     name = models.CharField(max_length=100, verbose_name="Название")
 
@@ -41,9 +45,8 @@ class Applicant(models.Model):
     phone = models.CharField(max_length=20, verbose_name='Номер телефона студента', blank=True, null=True)
     address = models.CharField(max_length=255, verbose_name="Адрес проживания")
     school = models.CharField(max_length=255, verbose_name="Школа")
-    YEAR_CHOICES = [(f'{r}', f'{r}') for r in range(datetime.date.today().year - 3, datetime.date.today().year + 1)]
 
-    graduation_date = models.CharField(max_length=20, choices=YEAR_CHOICES, default=YEAR_CHOICES[0],
+    graduation_date = models.CharField(max_length=20, default=current_graduation_year,
                                        verbose_name="Дата окончания школы", )
     education = models.CharField(max_length=100, verbose_name="Образование",
                                  choices=(("Основное общее", "Основное общее"),
@@ -69,7 +72,7 @@ class Applicant(models.Model):
         verbose_name_plural = "Абитуриенты"
 
     def change_status_to_answered(self):
-        self.status = 'answered'
+        self.status = 'Выдан ответ'
         self.save()
 
     def get_graduation_date(self):
@@ -110,12 +113,12 @@ class Document(models.Model):
         return f'{self.student}'
 
     def get_passport_series(self):
-        passport = self.passport_number.split()
-        return f'{passport[0]}'
+        digits = ''.join(char for char in (self.passport_number or '') if char.isdigit())
+        return digits[:4] if len(digits) == 10 else ''
 
     def get_passport_num(self):
-        passport = self.passport_number.split()
-        return f'{passport[1]}'
+        digits = ''.join(char for char in (self.passport_number or '') if char.isdigit())
+        return digits[4:] if len(digits) == 10 else ''
 
 
 class Parent(models.Model):
@@ -170,7 +173,7 @@ class Admission(models.Model):
                                      related_name="student")
     department = models.ManyToManyField('Department', verbose_name="Отделение",
                                         blank=True)
-    admission_date = models.DateField(verbose_name="Дата поступления", auto_now=True)
+    admission_date = models.DateField(verbose_name="Дата поступления", auto_now_add=True)
     number_of_5 = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(20)],
                                               verbose_name="Количество пятерок", blank=True, null=True)
     number_of_4 = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(20)],
@@ -212,32 +215,32 @@ class Admission(models.Model):
         return response
 
     def change_status_to_accepted(self):
-        self.application_status = 'accepted'
+        self.application_status = 'Принят'
         self.save()
 
     def change_status_to_denied(self):
-        self.application_status = 'denied'
+        self.application_status = 'Отказано'
         self.save()
 
     def change_status_to_watching(self):
-        self.application_status = 'watching'
+        self.application_status = 'Рассмотрение'
         self.save()
 
     def change_status_to_warn(self):
-        self.application_status = 'warn'
+        self.application_status = 'Отправлен на заполнение'
         self.save()
 
     def get_status(self):
-        if self.application_status == 'watching':
+        if self.application_status in ('watching', 'Рассмотрение'):
             return 'Рассмотрение'
-        elif self.application_status == 'denied':
+        elif self.application_status in ('denied', 'Отказано'):
             return 'Ваша заявка отклонена'
-        elif self.application_status == 'accepted':
+        elif self.application_status in ('accepted', 'Принят'):
             return 'Ваша заявка принята. Вы участвуете в конкурсе'
-        elif self.application_status == 'warn':
+        elif self.application_status in ('warn', 'Отправлен на заполнение'):
             return 'Ваша заявка под предупреждением. Заполните недостающие данные.'
         else:
-            return f'{None}'
+            return self.get_application_status_display()
 
     def get_fio(self):
         return f'{self.applicant.last_name} {self.applicant.first_name} {self.applicant.patronymic}'
@@ -255,14 +258,13 @@ class Admission(models.Model):
             return '✖'
 
     def save(self, *args, **kwargs):
-        total_scores = self.number_of_5 * 5 + self.number_of_4 * 4 + self.number_of_3 * 3
-        total_subjects = self.number_of_5 + self.number_of_4 + self.number_of_3
-
-        if total_subjects != 0:
-            self.average_score = total_scores / total_subjects
-
-        if self.internal_exam != Decimal(0.0):
-            self.internal_exam_conducted = True
+        five, four, three = (self.number_of_5 or 0, self.number_of_4 or 0, self.number_of_3 or 0)
+        total_subjects = five + four + three
+        self.average_score = (Decimal(five * 5 + four * 4 + three * 3) / Decimal(total_subjects)
+                              if total_subjects else Decimal('0'))
+        self.internal_exam_conducted = bool(self.internal_exam)
+        if kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'average_score', 'internal_exam_conducted'}
 
         super().save(*args, **kwargs)
 

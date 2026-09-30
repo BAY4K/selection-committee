@@ -1,31 +1,3 @@
 {% extends 'base.html' %}
-
-{% block title %}
-    Экспорт таблицы
-{% endblock %}
-
-
-{% block content %}
-    <div class="container">
-        <div class="export">
-            <h1>Выберите поля для экспорта</h1>
-            <form class="export_form" method="post">
-                {% csrf_token %}
-
-                <div class="form-errors">{{ form.non_field_errors }}</div>
-
-                {% for f in form %}
-
-                    <div class="input-field">
-                        <label hidden="hidden" for="{{ f.id_for_label }}">{{ f.label }}</label>
-                        {{ f }}
-                        <div class="input-errors">{{ f.errors }}</div>
-                    </div>
-
-                {% endfor %}
-
-                <button class="form-control-submit-btn export-btn" type="submit">Отправить</button>
-            </form>
-        </div>
-    </div>
-{% endblock %}
+{% block title %}Экспорт данных{% endblock %}
+{% block content %}<div class="container export-page"><a class="back-link" href="{% url 'admin:index' %}">← К административной панели</a><div class="page-heading"><p class="eyebrow">Приёмная комиссия</p><h1>Экспорт данных</h1><p class="muted">Выбери поля, которые нужно включить в таблицу Excel.</p></div><form class="data-card export-form" method="post">{% csrf_token %}{{ form.non_field_errors }}<div class="export-grid">{% for field in form %}<fieldset><legend>{{ field.label }}</legend>{{ field }}{% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}</fieldset>{% endfor %}</div><button class="button" type="submit">Скачать таблицу ↓</button></form></div>{% endblock %}

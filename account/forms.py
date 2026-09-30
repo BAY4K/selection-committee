@@ -37,7 +37,7 @@ class CustomUserCreationForm(UserCreationForm):
 
     def clean_email(self):
         email = self.cleaned_data['email']
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("Такой E-mail уже существует!")
         return email
 
@@ -73,9 +73,7 @@ class ProfileUserForm(forms.ModelForm):
             'photo': forms.FileInput(attrs={
                 'class': 'input-control',
                 'type': "file",
-                'id': "input__file",
                 'accept': "image/*",
-                'required': True
             }),
             'gender': forms.Select(attrs={'disabled': 'disabled'}),
             'address': forms.Textarea(attrs={'class': 'input-control', 'placeholder': 'Адрес',
@@ -85,10 +83,8 @@ class ProfileUserForm(forms.ModelForm):
             'consent': forms.FileInput(attrs={
                 'class': 'input-control',
                 'type': "file",
-                'id': "input__file",
                 'accept': ".doc,.docx,.xml,application/msword,"
                           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                'required': True
             }),
             'education': forms.Select(attrs={'class': 'input-control',
                                              'required': True}),
@@ -106,11 +102,11 @@ class ParentsEditForm(forms.ModelForm):
 
         widgets = {
             'mother_full_name': forms.TextInput(attrs={'class': 'input-control', 'placeholder': 'ФИО Мамы',
-                                                       'required': True, 'pattern': '^[А-Яа-яЁё]+$'}),
+                                                       'required': True, 'pattern': r'[А-Яа-яЁё \-]+'}),
             'mother_phone': forms.TextInput(attrs={'class': 'input-control', 'placeholder': 'Телефон Мамы',
                                                    'required': True}),
             'father_full_name': forms.TextInput(attrs={'class': 'input-control', 'placeholder': 'ФИО Папы',
-                                                       'required': True, 'pattern': '^[А-Яа-яЁё]+$'}),
+                                                       'required': True, 'pattern': r'[А-Яа-яЁё \-]+'}),
             'father_phone': forms.TextInput(attrs={'class': 'input-control', 'placeholder': 'Телефон Папы',
                                                    'required': True}),
         }
@@ -129,23 +125,23 @@ class DocumentEditForm(forms.ModelForm):
         widgets = {
             'SNILS': forms.TextInput(attrs={'class': 'input-control',
                                             'placeholder': 'Снилс',
-                                            'pattern': '\d{3}-\d{3}-\d{3} \d{2}',
+                                            'pattern': r'\d{3}-\d{3}-\d{3} \d{2}',
                                             'data-mask': '999-999-999 99',
                                             'required': True}),
             'INN': forms.TextInput(attrs={'class': 'input-control',
                                           'placeholder': 'ИНН',
-                                          'pattern': '\d{3}-\d{3}-\d{3} \d{2}',
-                                          'data-mask': '999--999-999 99',
+                                          'pattern': r'\d{12}',
+                                          'data-mask': '999999999999',
                                           'required': True}),
             'passport_number': forms.TextInput(attrs={'class': 'input-control',
                                                       'placeholder': 'Номер паспорта',
-                                                      'pattern': '\d{3}-\d{3} \d{6}',
-                                                      'data-mask': '999-999 999999',
+                                                      'pattern': r'\d{2} \d{2} \d{6}',
+                                                      'data-mask': '99 99 999999',
                                                       'required': True}),
-            'issue_date': forms.DateInput(attrs={'class': 'input-control', 'type': 'date',
+            'issue_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'input-control', 'type': 'date',
                                                  'required': True}),
             'issued_by': forms.Textarea(attrs={'class': 'input-control',
-                                               # 'pattern': '[\w\s,]+',
+                                               # 'pattern': r'[\w\s,]+',
                                                'placeholder': 'Кем выдан паспорт',
                                                'required': True}),
         }
@@ -172,7 +168,7 @@ class InterviewAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['students'].queryset = Applicant.objects.exclude(
-            id__in=Interview.objects.values_list('students', flat=True)
+            id__in=Interview.objects.exclude(pk=self.instance.pk).filter(students__isnull=False).values_list('students', flat=True)
         )
 
 
@@ -184,5 +180,5 @@ class InternalExamAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['students'].queryset = Applicant.objects.exclude(
-            id__in=InternalExam.objects.values_list('students', flat=True)
+            id__in=InternalExam.objects.exclude(pk=self.instance.pk).filter(students__isnull=False).values_list('students', flat=True)
         )

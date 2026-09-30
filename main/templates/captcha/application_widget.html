@@ -1,0 +1,13 @@
+<div class="captcha-widget" data-captcha data-refresh-url="{% url 'captcha-refresh' %}">
+    <div class="captcha-challenge">
+        <img class="captcha" src="{{ image }}" width="220" height="72" alt="Проверочный код из пяти символов" data-captcha-image>
+        <button class="captcha-refresh" type="button" data-captcha-refresh aria-label="Обновить проверочный код">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/></svg>
+            <span>Другой код</span>
+        </button>
+    </div>
+    {% for widget in widget.subwidgets %}{% include widget.template_name %}{% endfor %}
+    <p class="field-hint" id="captcha-hint">Введите 5 символов с картинки. Регистр букв не важен.</p>
+    <p class="captcha-status" data-captcha-status role="status" aria-live="polite"></p>
+    <noscript><p class="field-hint">Чтобы получить другой код, откройте форму заново. Обновление кода без перезагрузки требует JavaScript.</p></noscript>
+</div>

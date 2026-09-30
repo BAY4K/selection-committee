@@ -1,55 +1,22 @@
 {% extends 'base.html' %}
-
-{% load static %}
-
-{% block title %}Отделения{% endblock %}
-
-{% block profile_class %}form-page{% endblock %}
-
+{% block title %}Подать заявку{% endblock %}
+{% block profile_class %}application-page{% endblock %}
 {% block content %}
-    <div class="container">
-        <div class="registration_application">
-            <h2>Форма подачи заявки на регистрацию</h2>
-
-            <form class="registration_form" method="post">
-                {% csrf_token %}
-
-                <div class="form-errors">{{ form.non_field_errors }}</div>
-
-                {% for f in form %}
-                    {% if f.label == 'Пол' %}
-                        <div class="input-field">
-                            <div class="radio-input">
-                                {% for radio in f %}
-                                    <div>
-                                        {{ radio.tag }}
-                                        <label for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    {% elif f.label == 'Дата окончания школы' %}
-                        <div class="input-field">
-                            <label for="{{ f.id_for_label }}">{{ f.label }}</label>
-                            {{ f }}
-                            <div class="input-errors">{{ f.errors }}</div>
-                        </div>
-                    {% else %}
-                        <div class="input-field">
-                            <label hidden="hidden" for="{{ f.id_for_label }}">{{ f.label }}</label>
-                            {{ f }}
-                            <div class="input-errors">{{ f.errors }}</div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-
-                <p>
-                    <input type="checkbox" required id="accept" name="accept">
-                    <label for="accept">Я даю согласие на обработку персональных данных</label>
-                </p>
-                <p class="download-document"><a href="{% url 'download_document' %}">Скачать согласие</a></p>
-                <button class="form-control-submit-btn" type="submit">Отправить</button>
-            </form>
-        </div>
+<div class="container application-layout">
+    <aside class="application-intro"><a class="back-link" href="{% url 'home' %}">← На главную</a><p class="eyebrow">Знакомство начинается здесь</p><h1>Первый шаг<br><em>в твоё будущее.</em></h1><p>Заполни короткую анкету. После рассмотрения заявки мы отправим данные для входа в личный кабинет на твою почту.</p><ol class="application-steps"><li class="is-current"><span>1</span><div><strong>Заявка на поступление</strong><small>Расскажи немного о себе</small></div></li><li><span>2</span><div><strong>Личный кабинет</strong><small>Документы и выбор направления</small></div></li><li><span>3</span><div><strong>Участие в конкурсе</strong><small>Статус заявления и рейтинг</small></div></li></ol><div class="help-card"><span class="eyebrow">Нужна помощь?</span><a href="tel:+78552583022">8 (8552) 58-30-22</a><p>Приёмная комиссия подскажет,<br>с чего начать.</p></div></aside>
+    <div class="form-card"><div class="form-card-heading"><span class="pill">Анкета абитуриента</span><h2>Давай познакомимся</h2><p>Поля со звёздочкой обязательны для заполнения.</p></div>
+        <form class="application-form" method="post">
+            {% csrf_token %}
+            {% if form.errors %}<div class="error-summary" role="alert"><strong>Проверь данные перед отправкой</strong><p>Исправь выделенные поля. Остальные данные сохранены.</p>{{ form.non_field_errors }}</div>{% endif %}
+            <div class="form-section-heading"><span>01</span><h3>Личные данные</h3></div>
+            <div class="form-grid">{% for field in form %}{% if field.name == 'last_name' or field.name == 'first_name' or field.name == 'patronymic' or field.name == 'gender' or field.name == 'birth_date' %}{% include 'includes/form_field.html' %}{% endif %}{% endfor %}</div>
+            <div class="form-section-heading"><span>02</span><h3>Школа и связь с тобой</h3></div>
+            <div class="form-grid">{% for field in form %}{% if field.name == 'school' or field.name == 'graduation_date' or field.name == 'email' %}{% include 'includes/form_field.html' %}{% endif %}{% endfor %}</div>
+            <div class="form-section-heading"><span>03</span><h3>Осталось подтвердить</h3></div>
+            <div class="captcha-panel"><label class="captcha-label" for="{{ form.captcha.id_for_label }}">{{ form.captcha.label }} <span class="required-mark">*</span></label>{{ form.captcha }}{% if form.captcha.errors %}<div class="field-error" role="alert">{{ form.captcha.errors }}</div>{% endif %}</div>
+            <div class="consent-field"><label>{{ form.accept }}<span>Я даю согласие на обработку персональных данных и ознакомился с <a href="{% url 'download_document' %}">формой согласия</a>.</span></label>{% if form.accept.errors %}<div class="field-error" role="alert">{{ form.accept.errors }}</div>{% endif %}</div>
+            <button class="button submit-button" type="submit">Отправить заявку <span aria-hidden="true">↗</span></button><p class="form-bottom-note">Уже есть доступ? <a href="{% url 'account:login' %}">Войти в личный кабинет</a></p>
+        </form>
     </div>
+</div>
 {% endblock %}

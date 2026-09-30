@@ -1,28 +1,2 @@
 {% extends 'account/profile_base.html' %}
-
-{% block content %}
-    <div class="container">
-        <h1 class="profile-header">Профиль</h1>
-        <div class="user-profile">
-            <img src="{{ user.student.photo.url }}" alt="{{ user.student.photo.name }}" width="200px">
-            <div class="user-short-info">
-                <p>ФИО: {{ user.student.last_name }} {{ user.student.first_name }} {{ user.student.patronymic }}</p>
-                <p>Пол: {{ user.student.get_gender }}</p>
-                <p>Дата рождения: {{ user.student.birth_date }}</p>
-                <p>Адрес:
-                    {% if user.student.address is not None %}{{ user.student.address }}{% else %}Не
-                        указано{% endif %}</p>
-                <p>Школа: {{ user.student.school }}</p>
-                <p>Окончание школы: {{ user.student.graduation_date }}</p>
-                <p>Образование: {{ user.student.education }}</p>
-                <p>Почта: {{ user.student.email }}</p>
-                <p>
-                    <span class="{{ user.student.student.application_status }}">
-                        Статус заявления: {{ user.student.student.get_status }}</span>
-                </p>
-            </div>
-
-        </div>
-{#        <a class="" href="{% url 'generate_document' user.student.id %}">Скачать заявление заранее</a>#}
-    </div>
-{% endblock %}
+{% block content %}<div class="page-heading"><p class="eyebrow">Твой следующий шаг</p><h1>Твоё поступление</h1><p class="muted">Личная информация и статус заявления.</p></div><div class="profile-summary"><div class="profile-avatar">{% if user.student.photo %}<img src="{{ user.student.photo.url }}" alt="Фото абитуриента" width="112" height="144" onerror="this.hidden=true;this.parentElement.classList.add('avatar-empty')">{% endif %}<span aria-hidden="true">{{ user.student.first_name|first }}{{ user.student.last_name|first }}</span></div><div><span class="pill">Абитуриент</span><h2>{{ user.student.last_name }} {{ user.student.first_name }}</h2><p class="muted">{{ user.student.patronymic }}</p><a class="inline-link" href="{% url 'account:profile-edit' user.student.id %}">Редактировать данные ↗</a></div></div><div class="status-card"><span class="status-dot"></span><div><span class="eyebrow">Статус заявления</span><p>{{ user.student.student.get_status|default:'Заявление ещё не создано' }}</p></div></div><div class="data-card"><div class="card-heading"><h2>Личная информация</h2><span class="muted">Анкета</span></div><dl class="profile-details"><div><dt>Дата рождения</dt><dd>{{ user.student.birth_date|date:'d.m.Y' }}</dd></div><div><dt>Пол</dt><dd>{{ user.student.get_gender }}</dd></div><div><dt>Электронная почта</dt><dd>{{ user.student.email }}</dd></div><div><dt>Телефон</dt><dd>{{ user.student.phone|default:'Не указан' }}</dd></div><div><dt>Школа</dt><dd>{{ user.student.school }}</dd></div><div><dt>Год окончания</dt><dd>{{ user.student.graduation_date }}</dd></div><div><dt>Образование</dt><dd>{{ user.student.education }}</dd></div><div><dt>Адрес</dt><dd>{{ user.student.address|default:'Не указан' }}</dd></div></dl></div>{% endblock %}

@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.views.generic import CreateView, UpdateView, TemplateView, ListView
 
 from account.forms import CustomUserCreationForm, LoginUserForm, ProfileUserForm, ParentsEditForm, DocumentEditForm, \
@@ -28,7 +30,19 @@ class UserCreation(CreateView):
     success_url = reverse_lazy('account:login')
 
 
-class ProfileUser(TemplateView, LoginRequiredMixin):
+class ApplicantAccessMixin(LoginRequiredMixin):
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        if request.user.student_id is None:
+            raise Http404("Профиль абитуриента не найден")
+        expected = request.user.pk if isinstance(self, ProfileUser) else request.user.student_id
+        if kwargs.get('pk', expected) != expected:
+            raise Http404("Профиль не найден")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ProfileUser(ApplicantAccessMixin, TemplateView):
     template_name = 'account/profile.html'
 
     def get_success_url(self):
@@ -38,8 +52,11 @@ class ProfileUser(TemplateView, LoginRequiredMixin):
         return self.request.user
 
 
-class EditProfile(UpdateView, LoginRequiredMixin):
+class EditProfile(ApplicantAccessMixin, UpdateView):
     model = Applicant
+
+    def get_queryset(self):
+        return super().get_queryset().filter(pk=self.request.user.student_id)
     template_name = 'account/profile_edit.html'
     form_class = ProfileUserForm
 
@@ -47,7 +64,7 @@ class EditProfile(UpdateView, LoginRequiredMixin):
         return reverse_lazy('account:profile', args=[self.request.user.id])
 
 
-class ParentsProfileView(UpdateView, LoginRequiredMixin):
+class ParentsProfileView(ApplicantAccessMixin, UpdateView):
     model = Parent
     template_name = 'account/profile_edit.html'
     form_class = ParentsEditForm
@@ -56,10 +73,10 @@ class ParentsProfileView(UpdateView, LoginRequiredMixin):
         return reverse_lazy('account:profile', args=[self.request.user.id])
 
     def get_object(self, queryset=None):
-        return Parent.objects.get(student=self.request.user.student)
+        return get_object_or_404(Parent, student=self.request.user.student)
 
 
-class DocumentsProfileView(UpdateView, LoginRequiredMixin):
+class DocumentsProfileView(ApplicantAccessMixin, UpdateView):
     model = Document
     template_name = 'account/profile_edit.html'
     form_class = DocumentEditForm
@@ -68,10 +85,10 @@ class DocumentsProfileView(UpdateView, LoginRequiredMixin):
         return reverse_lazy('account:profile', args=[self.request.user.id])
 
     def get_object(self, queryset=None):
-        return Document.objects.get(student=self.request.user.student)
+        return get_object_or_404(Document, student=self.request.user.student)
 
 
-class AdmissionProfileView(UpdateView, LoginRequiredMixin):
+class AdmissionProfileView(ApplicantAccessMixin, UpdateView):
     model = Admission
     template_name = 'account/profile_edit.html'
     form_class = AdmissionEditForm
@@ -80,26 +97,28 @@ class AdmissionProfileView(UpdateView, LoginRequiredMixin):
         return reverse_lazy('account:profile', args=[self.request.user.id])
 
     def get_object(self, queryset=None):
-        return Admission.objects.get(applicant=self.request.user.student)
+        return get_object_or_404(Admission, applicant=self.request.user.student)
 
 
-class RankProfileView(LoginRequiredMixin, ListView):
+class RankProfileView(ApplicantAccessMixin, ListView):
     template_name = 'account/profile_rank.html'
     model = Admission
 
     def get_queryset(self):
         average_score = '4.0'
-        user_departments = self.request.user.student.student.department.values_list('name', flat=True).distinct()
+        admission = getattr(self.request.user.student, 'student', None)
+        if admission is None:
+            return []
+        user_departments = admission.department.all()
         user_admissions = Admission.objects.filter(applicant=self.request.user.student)
 
         department_admissions = []
-        for departments in user_departments:
-            department = Department.objects.get(name=departments)
+        for department in user_departments:
             all_admissions = Admission.objects.filter(
                 department=department,
-                application_status__contains='accepted',
+                application_status__in=['Принят', 'accepted'],
                 average_score__gte=Decimal(average_score)
-            ).order_by('-average_score', '-internal_exam')[:25]
+            ).order_by('-average_score', '-internal_exam', 'pk')
 
             top_25_admissions = all_admissions[:25]
 
@@ -118,5 +137,5 @@ class RankProfileView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['department_admissions'] = self.get_queryset()
+        context['department_admissions'] = context['object_list']
         return context
